@@ -44,5 +44,6 @@ Follow the steps to create telegram bot
     ```
 4. Run the script 
     ```
+    $ python py_telegram_bot_api.py
     $ python telegram_bot.py
     ```

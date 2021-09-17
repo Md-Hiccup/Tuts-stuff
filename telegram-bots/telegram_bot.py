@@ -1,57 +1,75 @@
 """ 
 Install library
     $ pip install python-dotenv
-    $ pip install pyTelegramBotApi
-
-To get Chat ID
-    1. Create a channel
-    2. Add your bot to channel
-    3. Add @getidsbot
-    4. Save chat-id
+    $ pip install python-telegram-bot
 
 Run the script
-    $ python telegram-bot.py
+    $ python telegram_bot.py
+
+To get chat-id
+https://api.telegram.org/bot1<token>/sendMessage?chat_id=@channelName&text=123
 """
-
-import os
-import telebot
+from telegram.ext import Updater, InlineQueryHandler, CommandHandler,  MessageHandler, Filters
+from telegram.ext.dispatcher import run_async
 import requests
-
-# Load .env file data
+import re
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Create telebot
 API_KEY = os.getenv('API_KEY')
-CHAT_ID = os.getenv('CHAT_ID')
 
-bot = telebot.TeleBot(API_KEY, parse_mode='MARKDOWN')
 
-# To reply the particular message
-@bot.message_handler(commands=['Greet', 'greet'])
-def greet(message):
-    bot.reply_to(message, "Hey! how's it going")
+def get_url():
+    contents = requests.get('https://random.dog/woof.json').json()
+    url = contents['url']
+    return url
 
-# To send the message
-@bot.message_handler(commands=['hello', 'hi', 'Hello', 'Hi'])
-def hello(message):
-    bot.send_message(message.chat.id, "Hello! How are you")
+def get_image_url():
+    allowed_extension = ['jpg','jpeg','png']
+    file_extension = ''
+    while file_extension not in allowed_extension:
+        url = get_url()
+        file_extension = re.search("([^.]*)$",url).group(1).lower()
+    return url
 
-# To show all commands
-@bot.message_handler(commands=['help'])
-def help(message):
-    msg = f"""
-    Welcome commands
-    /hello - Hello
-    /Greet - Hey! how's it going
-    """
-    bot.send_message(message.chat.id, msg)
+# @run_async
+def bop(update, context):
+    url = get_image_url()
+    chat_id = update.message.chat_id
+    context.bot.send_photo(chat_id=chat_id, photo=url)
 
-# To echo the message
-@bot.message_handler(func=lambda message: True)
-def echo_all(message):
-	bot.reply_to(message, message.text)
- 
+def start(update, context):
+    s = "Welcome I Am The Binance new coin Chat Bot! Your life has now changed forever."
+    update.message.reply_text(s)
+    context.bot.sendMessage(chat_id='@BinanceNewCoin', text='Some content')
+    
+def repeater(update, context):
+    # if context.user_data[echo]:
+    #     update.message.reply_text(update.message.text)
+    update.message.reply_text(update.message.text)
+    
 
-bot.polling()
+def echo(update, context):
+    command = context.args[0].lower()
+    if("on" == command):
+        context.user_data[echo] = True
+        update.message.reply_text("Repeater Started")
+    elif("off" == command):
+        context.user_data[echo] = False
+        update.message.reply_text("Repeater Stopped")
+
+def main():
+    updater = Updater(API_KEY, use_context=True)
+    dp = updater.dispatcher
+    dp.add_handler(CommandHandler('bop',bop))
+    dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('echo', echo))
+    dp.add_handler(MessageHandler(Filters.text, repeater))
+    updater.start_polling()
+    updater.idle()
+
+
+if __name__ == '__main__':
+    main()
